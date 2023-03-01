@@ -1,0 +1,18 @@
+{
+  "kind": "collectionType",
+  "collectionName": "turbines",
+  "info": {
+    "singularName": "turbine",
+    "pluralName": "turbines",
+    "displayName": "Turbine"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string"
+    }
+  }
+}
