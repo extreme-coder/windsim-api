@@ -1,0 +1,60 @@
+{
+  "kind": "collectionType",
+  "collectionName": "area_requests",
+  "info": {
+    "singularName": "area-request",
+    "pluralName": "area-requests",
+    "displayName": "Area Request",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "x1": {
+      "type": "decimal"
+    },
+    "x2": {
+      "type": "decimal"
+    },
+    "y1": {
+      "type": "decimal"
+    },
+    "y2": {
+      "type": "decimal"
+    },
+    "currentX": {
+      "type": "decimal"
+    },
+    "currentY": {
+      "type": "decimal"
+    },
+    "currentSpeed": {
+      "type": "decimal"
+    },
+    "highestX": {
+      "type": "decimal"
+    },
+    "highestY": {
+      "type": "decimal"
+    },
+    "highestSpeed": {
+      "type": "decimal"
+    },
+    "step": {
+      "type": "decimal"
+    },
+    "temperature": {
+      "type": "float"
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": [
+        "WAITING",
+        "COMPLETED"
+      ],
+      "default": "WAITING"
+    }
+  }
+}
