@@ -30,6 +30,15 @@
         "DISCARDED"
       ],
       "default": "WAITING"
+    },
+    "request": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::area-request.area-request"
+    },
+    "isFirst": {
+      "type": "boolean",
+      "default": false
     }
   }
 }

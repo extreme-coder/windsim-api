@@ -31,7 +31,8 @@
       "type": "decimal"
     },
     "currentSpeed": {
-      "type": "decimal"
+      "type": "decimal",
+      "default": 1
     },
     "highestX": {
       "type": "decimal"
@@ -46,7 +47,8 @@
       "type": "decimal"
     },
     "temperature": {
-      "type": "float"
+      "type": "float",
+      "default": 2
     },
     "status": {
       "type": "enumeration",
@@ -55,6 +57,20 @@
         "COMPLETED"
       ],
       "default": "WAITING"
+    },
+    "pointsAwaiting": {
+      "type": "integer",
+      "default": 1
+    },
+    "name": {
+      "type": "string"
+    },
+    "cycles": {
+      "type": "integer",
+      "default": 10
+    },
+    "session_id": {
+      "type": "biginteger"
     }
   }
 }
