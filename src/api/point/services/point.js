@@ -13,6 +13,7 @@ module.exports = createCoreService('api::point.point', ({ strapi }) => ({
     //create parameter string from ctx.query
     const query = `lat=${p.x}&lon=${p.y}&height=100&date_from=2019-01-01&date_to=2019-12-31&&mean=year`
     const { data } = await axios.get('http://windatlas.xyz/api/wind?' + query)
+    console.log(data)
     //parse csv data 
     let s = parseFloat(data.split('\n')[3].split(',')[1])
     if(data === "{'detail': ErrorDetail(string='Data does not exist for this location', code='error')}") s = 0
