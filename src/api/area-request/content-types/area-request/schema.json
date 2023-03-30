@@ -71,6 +71,14 @@
     },
     "session_id": {
       "type": "biginteger"
+    },
+    "cycles_completed": {
+      "type": "integer",
+      "default": 0
+    },
+    "points_processed": {
+      "type": "integer",
+      "default": 0
     }
   }
 }

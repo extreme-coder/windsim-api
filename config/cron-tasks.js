@@ -6,10 +6,13 @@ module.exports = {
       if(points.length == 0) return
       const p = points[Math.floor(Math.random() * points.length)]
       await strapi.service('api::point.point').resolve(p)
+      let totalResolvedPoints = 0
       const req = await strapi.db.query('api::area-request.area-request').findOne({ where: { id: p.request.id, pointsAwaiting: 0, status: 'WAITING' }, populate: true }).then(async (req) => {
         if (req) {
-          console.log(req)
+          
           const points = await strapi.db.query('api::point.point').findMany({ where: { request: req.id, status: 'RESOLVED' }, populate: true })
+          const allPoints = await strapi.db.query('api::point.point').findMany({ where: { request: req.id }})
+          totalResolvedPoints = allPoints.length
           highestRatio = 0
           highestPoint = -1
           currentPoint = -1
@@ -37,10 +40,23 @@ module.exports = {
 
           //if currentPoint is -1, set currentPoint to highestPoint
           if (currentPoint == -1) {
-            if(Math.random() * req.temperature < highestRatio) {
+            if(Math.random() * req.temperature < highestRatio && highestPoint != -1) {
               currentPoint = highestPoint
             } else {
-              currentPoint = points[Math.floor(Math.random() * points.length)].id
+              //create a random point
+              const pointX = Math.random() * 1.0 * (req.x2 - req.x1) + req.x1;
+              const pointY = Math.random() * 1.0 * (req.y2 - req.y1) + req.y1;
+              const cp = await strapi.entityService.create('api::point.point', {
+                data: {
+                  x: pointX,
+                  y: pointY,
+                  request: req.id,
+                  isFirst: false,
+                  publishedAt: new Date()
+                }
+              });
+              //currentPoint = points[Math.floor(Math.random() * points.length)].id
+              currentPoint = cp.id
             }
           }
           if (currentPoint !== -1) {
@@ -67,52 +83,67 @@ module.exports = {
           if (currentPoint == -1) {
             currentPointObj = await strapi.db.query('api::point.point').findMany({ where: { request: req.id, status: 'CURRENT' }, populate: true })[0]
           }
-          console.log(step)
+          
           indents = [{ x: step, y: 0 }, { x: -step, y: 0 }, { x: 0, y: step }, { x: 0, y: -step }]
           const n = await Promise.all(indents.map(async (indent) => {
-            //create new point with request = req.id, x = req.x + indent.x, y = req.y + indent.y, isFirst = false, if a point with the same request and x and y does not exist
-            let p = await strapi.db.query('api::point.point').findOne({ where: { request: req.id, x: currentPointObj.x + indent.x, y: currentPointObj.y + indent.y } })
-            if (!p) {
-              p = await strapi.entityService.create('api::point.point', {
-                data: {
-                  x: currentPointObj.x + indent.x,
-                  y: currentPointObj.y + indent.y,
-                  request: req.id,
-                  isFirst: false,
-                  publishedAt: new Date()
-                }
-              })
-              return true
+            if(currentPointObj.x + indent.x > req.x1 && currentPointObj.x + indent.x < req.x2 && currentPointObj.y + indent.y > req.y1 && currentPointObj.y + indent.y < req.y2) {              
+              //create new point with request = req.id, x = req.x + indent.x, y = req.y + indent.y, isFirst = false, if a point with the same request and x and y does not exist
+              let p = await strapi.db.query('api::point.point').findOne({ where: { request: req.id, x: currentPointObj.x + indent.x, y: currentPointObj.y + indent.y } })
+              if (!p) {
+                p = await strapi.entityService.create('api::point.point', {
+                  data: {
+                    x: currentPointObj.x + indent.x,
+                    y: currentPointObj.y + indent.y,
+                    request: req.id,
+                    isFirst: false,
+                    publishedAt: new Date()
+                  }
+                })
+                return true
+              }
             }
             return false
           }))
-          console.log(n)
-          console.log(n.filter((x) => x).length)
+          let newPoints = n.filter((x) => x).length
+          if( newPoints == 0) { 
+            //no more points left to process
+            //create a random point
+            const pointX = Math.random() * 1.0 * (req.x2 - req.x1) + req.x1;
+            const pointY = Math.random() * 1.0 * (req.y2 - req.y1) + req.y1;
+            const cp = await strapi.entityService.create('api::point.point', {
+              data: {
+                x: pointX,
+                y: pointY,
+                request: req.id,
+                isFirst: false,
+                publishedAt: new Date()
+              }
+            });
+            newPoints = 1
+          }
+
+          let areaData =  {
+            pointsAwaiting: req.pointsAwaiting + newPoints,
+            currentSpeed: currentPointObj.speed,
+            temperature: req.temperature - 2.0/req.cycles,
+            cycles_completed: req.cycles_completed + 1,
+            points_processed: totalResolvedPoints
+          }
+          if (currentPointObj.speed > req.highestSpeed) {                          
+            areaData.highestSpeed = currentPointObj.speed,
+            areaData.highestX =  currentPointObj.x,
+            areaData.highestY =  currentPointObj.y           
+          }
+          if (req.cycles_completed >= req.cycles-1) {
+            areaData.status = 'COMPLETED'
+          }
+          
           await strapi.entityService.update('api::area-request.area-request', req.id, {
-            data: {
-              pointsAwaiting: req.pointsAwaiting + n.filter((x) => x).length,
-              currentSpeed: currentPointObj.speed,
-              temperature: req.temperature - 2.0/req.cycles
-            }
+            data: areaData
           })
           //if req's currentSpeed is greater than its highestSpeed, update highestSpeed to currentSpeed and update highestX and highestY to currentPoint's x and y
-          if (req.currentSpeed > req.highestSpeed) {
-            await strapi.entityService.update('api::area-request.area-request', req.id, {
-              data: {
-                highestSpeed: req.currentSpeed,
-                highestX: currentPointObj.x,
-                highestY: currentPointObj.y
-              }
-            })
-          }
-          if (req.temperature <= 0) {
-            //set req's status to 'COMPLETED'
-            await strapi.entityService.update('api::area-request.area-request', req.id, {
-              data: {
-                status: 'COMPLETED'
-              }
-            })
-          }
+                    
+          strapi.io.to(req.session_id).emit('progress', {})
         }
       })
     },
