@@ -6,13 +6,27 @@ module.exports = {
       if(points.length == 0) return
       const p = points[Math.floor(Math.random() * points.length)]
       await strapi.service('api::point.point').resolve(p)
-      let totalResolvedPoints = 0
+      
+      //update the request's points_processed
+      const reqtoUpdate = await strapi.db.query('api::area-request.area-request').findMany({ where: { id: p.request.id, status: 'WAITING' }, populate: false })
+      reqtoUpdate.forEach(async (req) => {
+        const allPoints = await strapi.db.query('api::point.point').findMany({ where: { request: req.id }})
+        let totalResolvedPoints = allPoints.length
+        console.log('updating points:' + totalResolvedPoints)
+        await strapi.entityService.update('api::area-request.area-request', req.id, {
+          data: {
+            points_processed: totalResolvedPoints,
+          }
+        })
+        strapi.io.to(req.session_id).emit('progress', {})
+      })
+      
+
       const req = await strapi.db.query('api::area-request.area-request').findOne({ where: { id: p.request.id, pointsAwaiting: 0, status: 'WAITING' }, populate: true }).then(async (req) => {
         if (req) {
           
           const points = await strapi.db.query('api::point.point').findMany({ where: { request: req.id, status: 'RESOLVED' }, populate: true })
-          const allPoints = await strapi.db.query('api::point.point').findMany({ where: { request: req.id }})
-          totalResolvedPoints = allPoints.length
+          
           highestRatio = 0
           highestPoint = -1
           currentPoint = -1
@@ -126,8 +140,7 @@ module.exports = {
             pointsAwaiting: req.pointsAwaiting + newPoints,
             currentSpeed: currentPointObj.speed,
             temperature: req.temperature - 2.0/req.cycles,
-            cycles_completed: req.cycles_completed + 1,
-            points_processed: totalResolvedPoints
+            cycles_completed: req.cycles_completed + 1
           }
           if (currentPointObj.speed > req.highestSpeed) {                          
             areaData.highestSpeed = currentPointObj.speed,
@@ -148,7 +161,7 @@ module.exports = {
       })
     },
     options: {
-      rule: "*/2 * * * * *"
+      rule: "*/4 * * * * *"
     },
   },
 };
