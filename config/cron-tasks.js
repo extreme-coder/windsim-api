@@ -14,8 +14,8 @@ module.exports = {
           highestPoint = -1
           currentPoint = -1
           //for each point:
-          points.every(async (p) => {
-            if (p.first) {
+          points.every(async (p) => {            
+            if (p.isFirst) {              
               currentPoint = p.id
               return false
             }
@@ -32,9 +32,16 @@ module.exports = {
             }
             return true
           })
+
+          console.log('current point: ' + currentPoint)
+
           //if currentPoint is -1, set currentPoint to highestPoint
-          if (currentPoint == -1 && Math.random() * req.temperature < highestRatio) {
-            currentPoint = highestPoint
+          if (currentPoint == -1) {
+            if(Math.random() * req.temperature < highestRatio) {
+              currentPoint = highestPoint
+            } else {
+              currentPoint = points[Math.floor(Math.random() * points.length)].id
+            }
           }
           if (currentPoint !== -1) {
             await strapi.entityService.update('api::point.point', currentPoint, { data: { status: 'CURRENT' } })
@@ -110,7 +117,7 @@ module.exports = {
       })
     },
     options: {
-      rule: "*/30 * * * * *"
+      rule: "*/2 * * * * *"
     },
   },
 };
